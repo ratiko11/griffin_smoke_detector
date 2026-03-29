@@ -1,0 +1,16 @@
+C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\bin\Debug\net10.0-windows\griffin_smoke_detector.exe
+C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\bin\Debug\net10.0-windows\griffin_smoke_detector.deps.json
+C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\bin\Debug\net10.0-windows\griffin_smoke_detector.runtimeconfig.json
+C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\bin\Debug\net10.0-windows\griffin_smoke_detector.dll
+C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\bin\Debug\net10.0-windows\griffin_smoke_detector.pdb
+C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\obj\Debug\net10.0-windows\griffin_smoke_detector.Form1.resources
+C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\obj\Debug\net10.0-windows\griffin_smoke_detector.csproj.GenerateResource.cache
+C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\obj\Debug\net10.0-windows\griffin_smoke_detector.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\obj\Debug\net10.0-windows\griffin_smoke_detector.AssemblyInfoInputs.cache
+C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\obj\Debug\net10.0-windows\griffin_smoke_detector.AssemblyInfo.cs
+C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\obj\Debug\net10.0-windows\griffin_smoke_detector.csproj.CoreCompileInputs.cache
+C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\obj\Debug\net10.0-windows\griffin_smoke_detector.dll
+C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\obj\Debug\net10.0-windows\refint\griffin_smoke_detector.dll
+C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\obj\Debug\net10.0-windows\griffin_smoke_detector.pdb
+C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\obj\Debug\net10.0-windows\griffin_smoke_detector.genruntimeconfig.cache
+C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\obj\Debug\net10.0-windows\ref\griffin_smoke_detector.dll
