@@ -2,6 +2,7 @@ using Microsoft.VisualBasic.ApplicationServices;
 using System.Diagnostics.Eventing.Reader;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using static System.Windows.Forms.Timer;
 
 namespace griffin_smoke_detector
 {
@@ -13,12 +14,22 @@ namespace griffin_smoke_detector
         public string pasw = "abc";
         public int attempts = 0;
 
+        //ტაიმერი
+        public int lockoutTime = 60; // დაიწყოს 1 წუთით
+        public int secondsRemaining = 0;
+        private System.Windows.Forms.Timer lockoutTimer;
+
         public Form1()
         {
             InitializeComponent();
             // პანელების (GroupBox) მშობლად ფორმის მითითება სწორი განლაგებისთვის
             gb_reg.Parent = this;
             gb_login.Parent = this;
+
+            // Initialize Timer
+            lockoutTimer = new System.Windows.Forms.Timer();
+            lockoutTimer.Interval = 1000; // 1 second intervals
+            lockoutTimer.Tick += LockoutTimer_Tick;
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -26,7 +37,7 @@ namespace griffin_smoke_detector
             // რეგისტრაციის ფანჯრის დამალვა ჩართვისას
             gb_reg.Visible = false;
 
-            // მასივის შევსება ქართული ტექსტებით
+            // მასივის შევსება 
             text[0] = "ავტორიზაცია";
             text[1] = "შეიყვანეთ თქვენი მონაცემები რათა შეხვიდეთ პროგრამაში";
             text[2] = "ე-მაილი:";
@@ -106,6 +117,7 @@ namespace griffin_smoke_detector
                 if (attempts >= 3)
                 {
                     // 3 შეცდომის შემდეგ სისტემის დაბლოკვა
+                    StartLockout();
                     bt_signin.Enabled = false;
                     tb_email.Enabled = false;
                     tb_pasw.Enabled = false;
@@ -121,6 +133,44 @@ namespace griffin_smoke_detector
             lb_error.Left = (gb_login.Width - lb_error.Width) / 2;
             lb_error.Top = bt_signin.Top - 30;
         }
+
+        private void StartLockout()
+        {
+            // Disable inputs
+            bt_signin.Enabled = false;
+            tb_email.Enabled = false;
+            tb_pasw.Enabled = false;
+
+            secondsRemaining = lockoutTime;
+            lockoutTimer.Start();
+
+            // Set next lockout to 3 minutes (180s) for subsequent failures
+            lockoutTime = 180;
+        }
+
+
+        private void LockoutTimer_Tick(object sender, EventArgs e)
+        {
+            if (secondsRemaining > 0)
+            {
+                secondsRemaining--;
+                int mins = secondsRemaining / 60;
+                int secs = secondsRemaining % 60;
+                lb_error.Text = $"სისტემა დაბლოკილია! ცადეთ {mins}:{secs:D2} წუთში";
+            }
+            else
+            {
+                lockoutTimer.Stop();
+                bt_signin.Enabled = true;
+                tb_email.Enabled = true;
+                tb_pasw.Enabled = true;
+                lb_error.Text = "შეგიძლიათ ისევ სცადოთ";
+                lb_error.ForeColor = Color.Orange;
+                attempts = 2; // Next fail locks it again immediately
+            }
+            lb_error.Left = (gb_login.Width - lb_error.Width) / 2;
+        }
+
 
         private void bt_signin_register_Click(object sender, EventArgs e)
         {
@@ -200,5 +250,8 @@ namespace griffin_smoke_detector
                 lb_regerror.Location = new Point((gb_reg.Width - lb_regerror.Width) / 2, lb_regerror.Location.Y);
             }
         }
+
+
+
     }
 }
