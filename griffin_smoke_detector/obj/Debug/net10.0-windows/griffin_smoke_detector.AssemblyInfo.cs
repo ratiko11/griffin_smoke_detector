@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("griffin_smoke_detector")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0bd8d3fb94dd94b7e05d8cf91eaa49cca761a7d8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cc38d05078669211c3248b63c29be86b635af40b")]
 [assembly: System.Reflection.AssemblyProductAttribute("griffin_smoke_detector")]
 [assembly: System.Reflection.AssemblyTitleAttribute("griffin_smoke_detector")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

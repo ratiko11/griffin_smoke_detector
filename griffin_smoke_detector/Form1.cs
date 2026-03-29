@@ -2,6 +2,7 @@ using Microsoft.VisualBasic.ApplicationServices;
 using System.Diagnostics.Eventing.Reader;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+//დავამატე ტაიმერის ბიბლიოთეკა
 using static System.Windows.Forms.Timer;
 
 namespace griffin_smoke_detector
@@ -14,7 +15,7 @@ namespace griffin_smoke_detector
         public string pasw = "abc";
         public int attempts = 0;
 
-        //ტაიმერი
+        // ბლოკირების დროის, დარჩენილი წამების და ტაიმერის ცვლადები
         public int lockoutTime = 60; // დაიწყოს 1 წუთით
         public int secondsRemaining = 0;
         private System.Windows.Forms.Timer lockoutTimer;
@@ -34,6 +35,9 @@ namespace griffin_smoke_detector
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            //ჩვენი აპლიკაციის სახელი
+            this.Text = "Griffin Smoke Detector";
+
             // რეგისტრაციის ფანჯრის დამალვა ჩართვისას
             gb_reg.Visible = false;
 
@@ -134,9 +138,10 @@ namespace griffin_smoke_detector
             lb_error.Top = bt_signin.Top - 30;
         }
 
+        // სისტემის ბლოკირების ფუნქცია: თიშავს ველებს და რთავს ათვლას
         private void StartLockout()
         {
-            // Disable inputs
+           
             bt_signin.Enabled = false;
             tb_email.Enabled = false;
             tb_pasw.Enabled = false;
@@ -144,11 +149,12 @@ namespace griffin_smoke_detector
             secondsRemaining = lockoutTime;
             lockoutTimer.Start();
 
-            // Set next lockout to 3 minutes (180s) for subsequent failures
+            // შემდეგი დაბლოკვისთვის დროის გაზრდა 3 წუთამდე (180 წამი)
             lockoutTime = 180;
         }
 
 
+        // ფუნქცია, რომელიც ყოველ წამს აკლებს დროს და ანახლებს ტექსტს ეკრანზე
         private void LockoutTimer_Tick(object sender, EventArgs e)
         {
             if (secondsRemaining > 0)
