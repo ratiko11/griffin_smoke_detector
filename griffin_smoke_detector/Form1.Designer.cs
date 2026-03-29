@@ -145,7 +145,7 @@
             gb_login.Controls.Add(lb_signin1);
             gb_login.Controls.Add(lb_signin);
             gb_login.FlatStyle = FlatStyle.Flat;
-            gb_login.Location = new Point(94, 42);
+            gb_login.Location = new Point(93, 42);
             gb_login.Name = "gb_login";
             gb_login.Size = new Size(539, 392);
             gb_login.TabIndex = 0;
