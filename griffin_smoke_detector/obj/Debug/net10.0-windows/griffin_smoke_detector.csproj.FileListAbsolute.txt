@@ -14,4 +14,4 @@ C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\obj\Deb
 C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\obj\Debug\net10.0-windows\griffin_smoke_detector.genruntimeconfig.cache
 C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\obj\Debug\net10.0-windows\ref\griffin_smoke_detector.dll
 C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\obj\Debug\net10.0-windows\griffin_smoke_detector.sourcelink.json
-C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\obj\Debug\net10.0-windows\griffin_smoke_detector.UserData.resources
+C:\Users\Home\source\repos\griffin_smoke_detector\griffin_smoke_detector\obj\Debug\net10.0-windows\griffin_smoke_detector.Form1.resources

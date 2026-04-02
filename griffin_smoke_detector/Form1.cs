@@ -3,55 +3,72 @@ using System.Diagnostics.Eventing.Reader;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using static System.Windows.Forms.Timer;
-// დამატებული ბიბლიოთეკები ფაილებთან და JSON-თან მუშაობისთვის
 using System.IO;
 using System.Text.Json;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace griffin_smoke_detector
 {
-    // კლასი მომხმარებლის მონაცემების სტრუქტურისთვის
-    public class UserData
-    {
-        public string Email { get; set; }
-        public string Password { get; set; }
-    }
-
     public partial class Form1 : Form
     {
-        // JSON ფაილის სახელი და მომხმარებლების სია (ჩვენი "მონაცემთა ბაზა")
+        // მონაცემთა შენახვის ფაილი და მომხმარებლების სია
         private string filePath = "users.json";
         private List<UserData> usersList = new List<UserData>();
 
+        // ცვლადები ტექსტებისთვის, მცდელობების რაოდენობისა და ბლოკირებისთვის
         public string[] text = new string[20];
         public int attempts = 0;
-        public int lockoutTime = 60; 
+        public int lockoutTime = 60;
         public int secondsRemaining = 0;
         private System.Windows.Forms.Timer lockoutTimer;
 
         public Form1()
         {
             InitializeComponent();
-            
-            // აპლიკაციის ჩართვისთანავე ვკითხულობთ ფაილს
-            LoadUsers();
+            LoadUsers(); // მომხმარებლების ჩატვირთვა ფაილიდან
 
+            // ჯგუფების მიბმა მთავარ ფორმაზე
             gb_reg.Parent = this;
             gb_login.Parent = this;
 
+            // ფორმის ზომის შეცვლისას ელემენტების ხელახალი ცენტრირება
+            this.Resize += Form1_Resize;
+
+            CenterControl(gb_login);
+            CenterControl(gb_reg);
+
+            // ბლოკირების ტაიმერის კონფიგურაცია
             lockoutTimer = new System.Windows.Forms.Timer();
             lockoutTimer.Interval = 1000;
             lockoutTimer.Tick += LockoutTimer_Tick;
         }
 
-        // ფუნქცია მონაცემების JSON ფაილში შესანახად
+        // ფორმის ზომის ცვლილების ივენთი
+        private void Form1_Resize(object sender, EventArgs e)
+        {
+            if (gb_login.Visible) CenterControl(gb_login);
+            if (gb_reg.Visible) CenterControl(gb_reg);
+        }
+
+        // ელემენტის ეკრანის ცენტრში დასმის ფუნქცია
+        private void CenterControl(Control ctrl)
+        {
+            if (ctrl != null)
+            {
+                ctrl.Left = (this.ClientSize.Width - ctrl.Width) / 2;
+                ctrl.Top = (this.ClientSize.Height - ctrl.Height) / 2;
+            }
+        }
+
+        // მომხმარებლების სიის შენახვა JSON ფაილში
         private void SaveUsers()
         {
             string jsonString = JsonSerializer.Serialize(usersList);
             File.WriteAllText(filePath, jsonString);
         }
 
-        // ფუნქცია JSON ფაილიდან მონაცემების წასაკითხად
+        // მომხმარებლების ჩატვირთვა ფაილიდან (თუ ფაილი არ არსებობს, ქმნის სატესტოს)
         private void LoadUsers()
         {
             if (File.Exists(filePath))
@@ -61,18 +78,18 @@ namespace griffin_smoke_detector
             }
             else
             {
-                // თუ ფაილი არ არსებობს, ვამატებთ ერთ სატესტო მომხმარებელს და ვქმნით ფაილს
                 usersList.Add(new UserData { Email = "test1", Password = "abc" });
                 SaveUsers();
             }
         }
 
+        // ფორმის ჩატვირთვისას ტექსტებისა და ვიზუალის მომართვა
         private void Form1_Load(object sender, EventArgs e)
         {
             this.Text = "Griffin Smoke Detector";
             gb_reg.Visible = false;
 
-            // მასივის შევსება ტექსტებით
+            // ენობრივი მასივის შევსება
             text[0] = "ავტორიზაცია";
             text[1] = "შეიყვანეთ თქვენი მონაცემები რათა შეხვიდეთ პროგრამაში";
             text[2] = "ე-მაილი:";
@@ -89,7 +106,6 @@ namespace griffin_smoke_detector
             text[13] = "რეგისტრაცია";
             text[14] = "შეყვანილი მეილი გამოყენებულია ან არასწორად გაქვთ გამეორებული პაროლი";
 
-            // ვიზუალური ნაწილის დაყენება
             lb_signin.Text = text[0];
             lb_signin1.Text = text[1];
             lb_signin_email.Text = text[2];
@@ -99,10 +115,19 @@ namespace griffin_smoke_detector
             gb_login.Text = string.Empty;
             lb_error.Text = string.Empty;
 
+            // ინსტრუქციის ტექსტის ცენტრირება
+            lb_signin1.AutoSize = true;
+            lb_signin1.Left = (gb_login.Width - lb_signin1.Width) / 2;
+
+            // ვიზუალური სტილები (ფერები, ფონტები, დიზაინი)
             this.BackColor = Color.FromArgb(9, 13, 27);
             lb_signin.Font = new Font(bt_signin.Font, FontStyle.Bold);
-            lb_signin1.Location = new Point(lb_signin1.Location.X - lb_signin.Width - 10, lb_signin1.Location.Y);
-            lb_error.Location = new Point(lb_error.Location.X - lb_signin.Width + 40, lb_error.Location.Y);
+
+            // ელემენტების "მიბმა" საზღვრებზე (Anchor), რათა გაიწელონ ზომის ცვლილებისას
+            tb_email.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+            tb_pasw.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+            bt_signin.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+
             gb_login.BackColor = Color.FromArgb(17, 23, 39);
             gb_login.ForeColor = Color.White;
             tb_email.BackColor = Color.FromArgb(32, 39, 60);
@@ -120,30 +145,32 @@ namespace griffin_smoke_detector
             tb_email.ForeColor = Color.White;
             tb_pasw.ForeColor = Color.White;
             tb_pasw.PasswordChar = '*';
-            lb_error.Location = new Point(lb_error.Location.X - lb_signin.Width + 120, lb_error.Location.Y);
+
+            CenterControl(gb_login);
         }
 
+        // შესვლის ღილაკის ლოგიკა
         private void bt_signin_Click(object sender, EventArgs e)
         {
-            // ვეძებთ მომხმარებელს სიაში (ბაზაში)
+            // მომხმარებლის ძებნა სიაში მონაცემების მიხედვით
             var foundUser = usersList.Find(u => u.Email == tb_email.Text && u.Password == tb_pasw.Text);
 
             if (foundUser != null)
             {
-                attempts = 0;
+                attempts = 0; // მცდელობების განულება
                 lb_error.ForeColor = Color.Green;
-                lb_error.Text = text[6]; 
+                lb_error.Text = text[6];
                 lb_error.Left = (gb_login.Width - lb_error.Width) / 2;
                 MessageBox.Show($"ავტორიზაცია წარმატებულია! მოგესალმებით {foundUser.Email}");
                 gb_login.Visible = false;
             }
             else
             {
-                attempts++;
+                attempts++; // მცდელობის დამატება შეცდომისას
                 lb_error.ForeColor = Color.Red;
                 if (attempts >= 3)
                 {
-                    StartLockout();
+                    StartLockout(); // სისტემის ბლოკირება 3 შეცდომის შემდეგ
                     bt_signin.Enabled = false;
                     tb_email.Enabled = false;
                     tb_pasw.Enabled = false;
@@ -158,6 +185,7 @@ namespace griffin_smoke_detector
             lb_error.Top = bt_signin.Top - 30;
         }
 
+        // ბლოკირების რეჟიმის ჩართვა
         private void StartLockout()
         {
             bt_signin.Enabled = false;
@@ -165,9 +193,10 @@ namespace griffin_smoke_detector
             tb_pasw.Enabled = false;
             secondsRemaining = lockoutTime;
             lockoutTimer.Start();
-            lockoutTime = 180;
+            lockoutTime = 180; // შემდეგი დაბლოკვა უფრო ხანგრძლივი იქნება
         }
 
+        // ტაიმერის ყოველი წამი (უკუთვლა)
         private void LockoutTimer_Tick(object sender, EventArgs e)
         {
             if (secondsRemaining > 0)
@@ -179,17 +208,18 @@ namespace griffin_smoke_detector
             }
             else
             {
-                lockoutTimer.Stop();
+                lockoutTimer.Stop(); // ბლოკის მოხსნა
                 bt_signin.Enabled = true;
                 tb_email.Enabled = true;
                 tb_pasw.Enabled = true;
                 lb_error.Text = "შეგიძლიათ ისევ სცადოთ";
                 lb_error.ForeColor = Color.Orange;
-                attempts = 2;
+                attempts = 2; // აძლევს კიდევ 1 შანსს
             }
             lb_error.Left = (gb_login.Width - lb_error.Width) / 2;
         }
 
+        // რეგისტრაციის ფორმაზე გადასვლა
         private void bt_signin_register_Click(object sender, EventArgs e)
         {
             lb_error.Text = string.Empty;
@@ -197,8 +227,10 @@ namespace griffin_smoke_detector
             tb_pasw.Text = string.Empty;
             gb_login.Visible = false;
             gb_reg.Visible = true;
-            gb_reg.Location = new Point(gb_login.Location.X, gb_login.Location.Y);
 
+            CenterControl(gb_reg);
+
+            // რეგისტრაციის ტექსტების დასმა
             lb_reg.Text = text[8];
             lb_reginfo.Text = text[9];
             lb_regmail.Text = text[10];
@@ -207,7 +239,16 @@ namespace griffin_smoke_detector
             bt_reg.Text = text[13];
             lb_regerror.Text = string.Empty;
 
-            lb_reginfo.Location = new Point((gb_reg.Width - lb_reginfo.Width) / 2, lb_reg.Location.Y + 40);
+            // რეგისტრაციის ინსტრუქციის ცენტრირება
+            lb_reginfo.AutoSize = true;
+            lb_reginfo.Left = (gb_reg.Width - lb_reginfo.Width) / 2;
+
+            // რეგისტრაციის ველების Anchor-ები
+            tb_regmail.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+            tb_regpasw.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+            tb_regpaswconf.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+            bt_reg.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+
             gb_reg.Text = string.Empty;
             gb_reg.BackColor = Color.FromArgb(17, 23, 39);
             gb_reg.ForeColor = Color.White;
@@ -229,25 +270,18 @@ namespace griffin_smoke_detector
             tb_regpaswconf.PasswordChar = '*';
         }
 
+        // რეგისტრაციის დადასტურების ღილაკი
         private void bt_reg_Click(object sender, EventArgs e)
         {
-            // 1. ვამოწმებთ, უკვე არსებობს თუ არა ეს მეილი ბაზაში
-            bool exists = usersList.Exists(u => u.Email == tb_regmail.Text);
-
-            // 2. ვიძახებთ პაროლის ვალიდაციის ფუნქციას
+            bool exists = usersList.Exists(u => u.Email == tb_regmail.Text); // მეილის შემოწმება ბაზაში
             string password = tb_regpasw.Text;
-            bool isPasswordValid = ValidatePassword(password);
+            bool isPasswordValid = ValidatePassword(password); // პაროლის სირთულის შემოწმება
 
-            // 3. მთავარი შემოწმება: პაროლების დამთხვევა, ცარიელი მეილი, არსებული მეილი და პაროლის სირთულე
+            // ვალიდაცია: პაროლების დამთხვევა, ცარიელი ველი, არსებული მეილი და სირთულე
             if (tb_regpasw.Text == tb_regpaswconf.Text && !string.IsNullOrEmpty(tb_regmail.Text) && !exists && isPasswordValid)
             {
-                usersList.Add(new UserData
-                {
-                    Email = tb_regmail.Text,
-                    Password = tb_regpasw.Text
-                });
-
-                SaveUsers();
+                usersList.Add(new UserData { Email = tb_regmail.Text, Password = tb_regpasw.Text });
+                SaveUsers(); // ახალი მომხმარებლის შენახვა
 
                 tb_regmail.Text = string.Empty;
                 tb_regpasw.Text = string.Empty;
@@ -255,38 +289,40 @@ namespace griffin_smoke_detector
 
                 gb_reg.Visible = false;
                 gb_login.Visible = true;
+
+                CenterControl(gb_login);
                 MessageBox.Show("რეგისტრაცია წარმატებულია!");
             }
             else
             {
-                // შეცდომის შეტყობინების მორგება
+                // შეცდომის შეტყობინებების ჩვენება
                 if (!isPasswordValid)
-                {
                     lb_regerror.Text = "პაროლი უნდა შეიცავდეს: 1 დიდ ასოს, 1 ციფრს და 1 სიმბოლოს!";
-                }
                 else if (exists)
-                {
                     lb_regerror.Text = "ეს მეილი უკვე დაკავებულია!";
-                }
                 else
-                {
-                    lb_regerror.Text = text[14]; // ძველი შეცდომის ტექსტი
-                }
+                    lb_regerror.Text = text[14];
 
                 lb_regerror.ForeColor = Color.Red;
-                lb_regerror.Location = new Point((gb_reg.Width - lb_regerror.Width) / 2, lb_regerror.Location.Y);
+                lb_regerror.AutoSize = true;
+                lb_regerror.Left = (gb_reg.Width - lb_regerror.Width) / 2;
             }
         }
 
-        // ახალი ფუნქცია პაროლის შესამოწმებლად
+        // პაროლის სირთულის ვალიდაციის ფუნქცია
         private bool ValidatePassword(string password)
         {
-            // მინიმუმ 1 დიდი ასო, 1 ციფრი, 1 სპეციალური სიმბოლო
             bool hasUpperCase = password.Any(char.IsUpper);
             bool hasDigit = password.Any(char.IsDigit);
             bool hasSpecial = password.Any(ch => !char.IsLetterOrDigit(ch));
-
             return hasUpperCase && hasDigit && hasSpecial;
         }
+    }
+
+    // მომხმარებლის მონაცემების მოდელი JSON-ისთვის
+    public class UserData
+    {
+        public string Email { get; set; }
+        public string Password { get; set; }
     }
 }
