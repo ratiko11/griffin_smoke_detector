@@ -1,101 +1,79 @@
-using Microsoft.VisualBasic.ApplicationServices;
-using System.Diagnostics.Eventing.Reader;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-using static System.Windows.Forms.Timer;
-using System.IO;
-using System.Text.Json;
+using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
+using System.Windows.Forms;
 
 namespace griffin_smoke_detector
 {
     public partial class Form1 : Form
     {
-        // მონაცემთა შენახვის ფაილი და მომხმარებლების სია
+        // მონაცემების და ლოგიკის ცვლადები
         private string filePath = "users.json";
         private List<UserData> usersList = new List<UserData>();
-
-        // ცვლადები ტექსტებისთვის, მცდელობების რაოდენობისა და ბლოკირებისთვის
         public string[] text = new string[20];
         public int attempts = 0;
         public int lockoutTime = 60;
         public int secondsRemaining = 0;
         private System.Windows.Forms.Timer lockoutTimer;
 
+        // ახალი ცვლადები სიმულაციისთვის
+        private System.Windows.Forms.Timer simulationTimer; // ტაიმერი კვამლის დონის ცვლილებისთვის
+        private Random rnd = new Random();
+        private List<DeviceUI> deviceRows = new List<DeviceUI>(); // მოწყობილობების ელემენტების სია რეალურ დროში განახლებისთვის
+
+        // დინამიური კონტროლები - ავტორიზაცია (Login)
+        private GroupBox gb_login;
+        private Label lb_signin, lb_signin1, lb_signin_email, lb_signin_pasw, lb_error;
+        private TextBox tb_email, tb_pasw;
+        private Button bt_signin, bt_signin_register;
+
+        // დინამიური კონტროლები - რეგისტრაცია (Register)
+        private GroupBox gb_reg;
+        private Label lb_reg, lb_reginfo, lb_regmail, lb_regpasw, lb_regpaswconf, lb_regerror;
+        private TextBox tb_regmail, tb_regpasw, tb_regpaswconf;
+        private Button bt_reg;
+
+        // დინამიური კონტროლები - Dashboard (მთავარი პანელი)
+        private GroupBox gb_dashboard;
+        private Label lb_user_email, lb_dashboard_title;
+        private Button bt_logout;
+        private Panel pnl_cards_container;
+
         public Form1()
         {
-            InitializeComponent();
-            LoadUsers(); // მომხმარებლების ჩატვირთვა ფაილიდან
+            // ფანჯრის საწყისი პარამეტრები
+            this.Size = new Size(1000, 800);
+            this.StartPosition = FormStartPosition.CenterScreen;
 
-            // ჯგუფების მიბმა მთავარ ფორმაზე
-            gb_reg.Parent = this;
-            gb_login.Parent = this;
+            LoadUsers();
+            InitializeLanguageArray();
+            CreateDynamicControls();
 
-            // ფორმის ზომის შეცვლისას ელემენტების ხელახალი ცენტრირება
-            this.Resize += Form1_Resize;
-
-            CenterControl(gb_login);
-            CenterControl(gb_reg);
-
-            // ბლოკირების ტაიმერის კონფიგურაცია
+            // ტაიმერის კონფიგურაცია დაბლოკვისთვის
             lockoutTimer = new System.Windows.Forms.Timer();
             lockoutTimer.Interval = 1000;
             lockoutTimer.Tick += LockoutTimer_Tick;
+
+            // სიმულაციის ტაიმერის გამართვა (ყოველ 2 წამში მონაცემების შესაცვლელად)
+            simulationTimer = new System.Windows.Forms.Timer();
+            simulationTimer.Interval = 2000;
+            simulationTimer.Tick += SimulationTimer_Tick;
+
+            // ფანჯრის ზომის ცვლილებისას ელემენტების გასწორება
+            this.Resize += Form1_Resize;
         }
 
-        // ფორმის ზომის ცვლილების ივენთი
-        private void Form1_Resize(object sender, EventArgs e)
+        private void InitializeLanguageArray()
         {
-            if (gb_login.Visible) CenterControl(gb_login);
-            if (gb_reg.Visible) CenterControl(gb_reg);
-        }
-
-        // ელემენტის ეკრანის ცენტრში დასმის ფუნქცია
-        private void CenterControl(Control ctrl)
-        {
-            if (ctrl != null)
-            {
-                ctrl.Left = (this.ClientSize.Width - ctrl.Width) / 2;
-                ctrl.Top = (this.ClientSize.Height - ctrl.Height) / 2;
-            }
-        }
-
-        // მომხმარებლების სიის შენახვა JSON ფაილში
-        private void SaveUsers()
-        {
-            string jsonString = JsonSerializer.Serialize(usersList);
-            File.WriteAllText(filePath, jsonString);
-        }
-
-        // მომხმარებლების ჩატვირთვა ფაილიდან (თუ ფაილი არ არსებობს, ქმნის სატესტოს)
-        private void LoadUsers()
-        {
-            if (File.Exists(filePath))
-            {
-                string jsonString = File.ReadAllText(filePath);
-                usersList = JsonSerializer.Deserialize<List<UserData>>(jsonString) ?? new List<UserData>();
-            }
-            else
-            {
-                usersList.Add(new UserData { Email = "test1", Password = "abc" });
-                SaveUsers();
-            }
-        }
-
-        // ფორმის ჩატვირთვისას ტექსტებისა და ვიზუალის მომართვა
-        private void Form1_Load(object sender, EventArgs e)
-        {
-            this.Text = "Griffin Smoke Detector";
-            gb_reg.Visible = false;
-
-            // ენობრივი მასივის შევსება
             text[0] = "ავტორიზაცია";
             text[1] = "შეიყვანეთ თქვენი მონაცემები რათა შეხვიდეთ პროგრამაში";
             text[2] = "ე-მაილი:";
             text[3] = "პაროლი";
             text[4] = "შესვლა";
-            text[5] = "არ გაქცს ანგარიში? რეგისტრაცია";
+            text[5] = "არ გაქვს ანგარიში? რეგისტრაცია";
             text[6] = "სწორია";
             text[7] = "პაროლი ან ე-მაილი არასწორია";
             text[8] = "რეგისტრაცია";
@@ -105,224 +83,256 @@ namespace griffin_smoke_detector
             text[12] = "პაროლის დადასტურება";
             text[13] = "რეგისტრაცია";
             text[14] = "შეყვანილი მეილი გამოყენებულია ან არასწორად გაქვთ გამეორებული პაროლი";
+        }
 
-            lb_signin.Text = text[0];
-            lb_signin1.Text = text[1];
-            lb_signin_email.Text = text[2];
-            lb_signin_pasw.Text = text[3];
-            bt_signin.Text = text[4];
-            bt_signin_register.Text = text[5];
-            gb_login.Text = string.Empty;
-            lb_error.Text = string.Empty;
-
-            // ინსტრუქციის ტექსტის ცენტრირება
-            lb_signin1.AutoSize = true;
-            lb_signin1.Left = (gb_login.Width - lb_signin1.Width) / 2;
-
-            // ვიზუალური სტილები (ფერები, ფონტები, დიზაინი)
+        private void CreateDynamicControls()
+        {
             this.BackColor = Color.FromArgb(9, 13, 27);
-            lb_signin.Font = new Font(bt_signin.Font, FontStyle.Bold);
+            this.Text = "Griffin Smoke Detector";
 
-            // ელემენტების "მიბმა" საზღვრებზე (Anchor), რათა გაიწელონ ზომის ცვლილებისას
-            tb_email.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
-            tb_pasw.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
-            bt_signin.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+            // --- DASHBOARD GROUPBOX (მთავარი ინტერფეისი) ---
+            gb_dashboard = new GroupBox { Size = new Size(900, 650), Text = "", Visible = false, FlatStyle = FlatStyle.Flat };
+            gb_dashboard.BackColor = Color.FromArgb(15, 18, 34);
+            gb_dashboard.ForeColor = Color.White;
 
+            lb_dashboard_title = new Label { Text = "🔥 GriffinSmokeDetector", ForeColor = Color.FromArgb(0, 255, 149), Font = new Font("Segoe UI", 14, FontStyle.Bold), Top = 20, Left = 25, AutoSize = true };
+            lb_user_email = new Label { Text = "", ForeColor = Color.LightGray, Top = 25, Left = 600, AutoSize = true, Font = new Font("Segoe UI", 9) };
+
+            bt_logout = new Button { Text = "Logout ↪", Top = 20, Left = 800, Width = 80, FlatStyle = FlatStyle.Flat, ForeColor = Color.Gray, Font = new Font("Segoe UI", 9) };
+            bt_logout.FlatAppearance.BorderSize = 0;
+            bt_logout.Click += (s, e) => { gb_dashboard.Visible = false; gb_login.Visible = true; simulationTimer.Stop(); };
+
+            pnl_cards_container = new Panel { Top = 70, Left = 20, Size = new Size(860, 550), BackColor = Color.Transparent };
+
+            gb_dashboard.Controls.AddRange(new Control[] { lb_dashboard_title, lb_user_email, bt_logout, pnl_cards_container });
+            this.Controls.Add(gb_dashboard);
+
+            AddDashboardUIElements();
+
+            // --- ავტორიზაციის ჯგუფი (LOGIN GROUPBOX) ---
+            gb_login = new GroupBox { Size = new Size(450, 400), Text = "", FlatStyle = FlatStyle.Flat };
             gb_login.BackColor = Color.FromArgb(17, 23, 39);
             gb_login.ForeColor = Color.White;
-            tb_email.BackColor = Color.FromArgb(32, 39, 60);
-            tb_pasw.BackColor = Color.FromArgb(32, 39, 60);
-            tb_email.BorderStyle = BorderStyle.None;
-            tb_pasw.BorderStyle = BorderStyle.None;
-            bt_signin.BackColor = Color.FromArgb(0, 255, 149);
-            bt_signin.ForeColor = Color.FromArgb(32, 39, 60);
-            bt_signin.FlatStyle = FlatStyle.Flat;
-            bt_signin.Font = new Font(bt_signin.Font, FontStyle.Bold);
-            bt_signin_register.BackColor = Color.FromArgb(17, 23, 39);
-            bt_signin_register.FlatStyle = FlatStyle.Flat;
+
+            lb_signin = new Label { Text = text[0], Font = new Font("Segoe UI", 16, FontStyle.Bold), Top = 20, AutoSize = true };
+            lb_signin1 = new Label { Text = text[1], Top = 60, AutoSize = true, ForeColor = Color.LightGray };
+            lb_signin_email = new Label { Text = text[2], Top = 110, Left = 40, AutoSize = true };
+            tb_email = new TextBox { Top = 135, Left = 40, Width = 370, BackColor = Color.FromArgb(32, 39, 60), ForeColor = Color.White, BorderStyle = BorderStyle.None, Height = 25 };
+            lb_signin_pasw = new Label { Text = text[3], Top = 180, Left = 40, AutoSize = true };
+            tb_pasw = new TextBox { Top = 205, Left = 40, Width = 370, BackColor = Color.FromArgb(32, 39, 60), ForeColor = Color.White, BorderStyle = BorderStyle.None, PasswordChar = '*', Height = 25 };
+            lb_error = new Label { Text = "", Top = 250, AutoSize = true };
+            bt_signin = new Button { Text = text[4], Top = 280, Left = 40, Width = 370, Height = 40, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 255, 149), ForeColor = Color.FromArgb(32, 39, 60), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            bt_signin.FlatAppearance.BorderSize = 0;
+            bt_signin.Click += bt_signin_Click;
+            bt_signin_register = new Button { Text = text[5], Top = 340, Left = 40, Width = 370, FlatStyle = FlatStyle.Flat, ForeColor = Color.Gray };
             bt_signin_register.FlatAppearance.BorderSize = 0;
-            bt_signin_register.ForeColor = Color.Gray;
-            tb_email.ForeColor = Color.White;
-            tb_pasw.ForeColor = Color.White;
-            tb_pasw.PasswordChar = '*';
+            bt_signin_register.Click += bt_signin_register_Click;
 
-            CenterControl(gb_login);
-        }
+            gb_login.Controls.AddRange(new Control[] { lb_signin, lb_signin1, lb_signin_email, tb_email, lb_signin_pasw, tb_pasw, lb_error, bt_signin, bt_signin_register });
+            this.Controls.Add(gb_login);
 
-        // შესვლის ღილაკის ლოგიკა
-        private void bt_signin_Click(object sender, EventArgs e)
-        {
-            // მომხმარებლის ძებნა სიაში მონაცემების მიხედვით
-            var foundUser = usersList.Find(u => u.Email == tb_email.Text && u.Password == tb_pasw.Text);
-
-            if (foundUser != null)
-            {
-                attempts = 0; // მცდელობების განულება
-                lb_error.ForeColor = Color.Green;
-                lb_error.Text = text[6];
-                lb_error.Left = (gb_login.Width - lb_error.Width) / 2;
-                MessageBox.Show($"ავტორიზაცია წარმატებულია! მოგესალმებით {foundUser.Email}");
-                gb_login.Visible = false;
-            }
-            else
-            {
-                attempts++; // მცდელობის დამატება შეცდომისას
-                lb_error.ForeColor = Color.Red;
-                if (attempts >= 3)
-                {
-                    StartLockout(); // სისტემის ბლოკირება 3 შეცდომის შემდეგ
-                    bt_signin.Enabled = false;
-                    tb_email.Enabled = false;
-                    tb_pasw.Enabled = false;
-                    lb_error.Text = "სისტემა დაბლოკილია!";
-                }
-                else
-                {
-                    lb_error.Text = text[7] + " (დაგრჩათ " + (3 - attempts) + " ცდა)";
-                }
-            }
-            lb_error.Left = (gb_login.Width - lb_error.Width) / 2;
-            lb_error.Top = bt_signin.Top - 30;
-        }
-
-        // ბლოკირების რეჟიმის ჩართვა
-        private void StartLockout()
-        {
-            bt_signin.Enabled = false;
-            tb_email.Enabled = false;
-            tb_pasw.Enabled = false;
-            secondsRemaining = lockoutTime;
-            lockoutTimer.Start();
-            lockoutTime = 180; // შემდეგი დაბლოკვა უფრო ხანგრძლივი იქნება
-        }
-
-        // ტაიმერის ყოველი წამი (უკუთვლა)
-        private void LockoutTimer_Tick(object sender, EventArgs e)
-        {
-            if (secondsRemaining > 0)
-            {
-                secondsRemaining--;
-                int mins = secondsRemaining / 60;
-                int secs = secondsRemaining % 60;
-                lb_error.Text = $"სისტემა დაბლოკილია! ცადეთ {mins}:{secs:D2} წუთში";
-            }
-            else
-            {
-                lockoutTimer.Stop(); // ბლოკის მოხსნა
-                bt_signin.Enabled = true;
-                tb_email.Enabled = true;
-                tb_pasw.Enabled = true;
-                lb_error.Text = "შეგიძლიათ ისევ სცადოთ";
-                lb_error.ForeColor = Color.Orange;
-                attempts = 2; // აძლევს კიდევ 1 შანსს
-            }
-            lb_error.Left = (gb_login.Width - lb_error.Width) / 2;
-        }
-
-        // რეგისტრაციის ფორმაზე გადასვლა
-        private void bt_signin_register_Click(object sender, EventArgs e)
-        {
-            lb_error.Text = string.Empty;
-            tb_email.Text = string.Empty;
-            tb_pasw.Text = string.Empty;
-            gb_login.Visible = false;
-            gb_reg.Visible = true;
-
-            CenterControl(gb_reg);
-
-            // რეგისტრაციის ტექსტების დასმა
-            lb_reg.Text = text[8];
-            lb_reginfo.Text = text[9];
-            lb_regmail.Text = text[10];
-            lb_regpasw.Text = text[11];
-            lb_regpaswconf.Text = text[12];
-            bt_reg.Text = text[13];
-            lb_regerror.Text = string.Empty;
-
-            // რეგისტრაციის ინსტრუქციის ცენტრირება
-            lb_reginfo.AutoSize = true;
-            lb_reginfo.Left = (gb_reg.Width - lb_reginfo.Width) / 2;
-
-            // რეგისტრაციის ველების Anchor-ები
-            tb_regmail.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
-            tb_regpasw.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
-            tb_regpaswconf.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
-            bt_reg.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
-
-            gb_reg.Text = string.Empty;
+            // --- რეგისტრაციის ჯგუფი (REGISTER GROUPBOX) ---
+            gb_reg = new GroupBox { Size = new Size(450, 450), Text = "", Visible = false };
             gb_reg.BackColor = Color.FromArgb(17, 23, 39);
             gb_reg.ForeColor = Color.White;
-            lb_reg.Font = new Font(bt_signin.Font, FontStyle.Bold);
-            tb_regmail.BackColor = Color.FromArgb(32, 39, 60);
-            tb_regpasw.BackColor = Color.FromArgb(32, 39, 60);
-            tb_regpaswconf.BackColor = Color.FromArgb(32, 39, 60);
-            tb_regmail.BorderStyle = BorderStyle.None;
-            tb_regpasw.BorderStyle = BorderStyle.None;
-            tb_regpaswconf.BorderStyle = BorderStyle.None;
-            bt_reg.BackColor = Color.FromArgb(0, 255, 149);
-            bt_reg.ForeColor = Color.FromArgb(32, 39, 60);
-            bt_reg.FlatStyle = FlatStyle.Flat;
-            bt_reg.Font = new Font(bt_signin.Font, FontStyle.Bold);
-            tb_regmail.ForeColor = Color.White;
-            tb_regpasw.ForeColor = Color.White;
-            tb_regpasw.PasswordChar = '*';
-            tb_regpaswconf.ForeColor = Color.White;
-            tb_regpaswconf.PasswordChar = '*';
+
+            lb_reg = new Label { Text = text[8], Font = new Font("Segoe UI", 16, FontStyle.Bold), Top = 20, AutoSize = true };
+            lb_reginfo = new Label { Text = text[9], Top = 60, AutoSize = true, ForeColor = Color.LightGray };
+            lb_regmail = new Label { Text = text[10], Top = 110, Left = 40, AutoSize = true };
+            tb_regmail = new TextBox { Top = 135, Left = 40, Width = 370, BackColor = Color.FromArgb(32, 39, 60), ForeColor = Color.White, BorderStyle = BorderStyle.None };
+            lb_regpasw = new Label { Text = text[11], Top = 180, Left = 40, AutoSize = true };
+            tb_regpasw = new TextBox { Top = 205, Left = 40, Width = 370, BackColor = Color.FromArgb(32, 39, 60), ForeColor = Color.White, BorderStyle = BorderStyle.None, PasswordChar = '*' };
+            lb_regpaswconf = new Label { Text = text[12], Top = 250, Left = 40, AutoSize = true };
+            tb_regpaswconf = new TextBox { Top = 275, Left = 40, Width = 370, BackColor = Color.FromArgb(32, 39, 60), ForeColor = Color.White, BorderStyle = BorderStyle.None, PasswordChar = '*' };
+            lb_regerror = new Label { Text = "", Top = 310, AutoSize = true };
+            bt_reg = new Button { Text = text[13], Top = 340, Left = 40, Width = 370, Height = 40, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 255, 149), ForeColor = Color.FromArgb(32, 39, 60), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            bt_reg.FlatAppearance.BorderSize = 0;
+            bt_reg.Click += bt_reg_Click;
+
+            gb_reg.Controls.AddRange(new Control[] { lb_reg, lb_reginfo, lb_regmail, tb_regmail, lb_regpasw, tb_regpasw, lb_regpaswconf, tb_regpaswconf, lb_regerror, bt_reg });
+            this.Controls.Add(gb_reg);
+
+            CenterControl(gb_login);
+            CenterControl(gb_reg);
+            CenterControl(gb_dashboard);
+
+            lb_signin.Left = (gb_login.Width - lb_signin.Width) / 2;
+            lb_signin1.Left = (gb_login.Width - lb_signin1.Width) / 2;
         }
 
-        // რეგისტრაციის დადასტურების ღილაკი
+        private void AddDashboardUIElements()
+        {
+            CreateStatCard("Total Devices", "3", Color.White, 0);
+            CreateStatCard("System Health", "Good", Color.FromArgb(0, 255, 149), 210);
+
+            Label lb_list_title = new Label { Text = "Real-Time Room Monitoring (%)", Top = 120, Left = 5, ForeColor = Color.White, Font = new Font("Segoe UI", 12, FontStyle.Bold), AutoSize = true };
+            pnl_cards_container.Controls.Add(lb_list_title);
+
+            // ოთახების დინამიური სტრიქონების შექმნა
+            CreateDeviceRow("Kitchen Smoke Level", 160);
+            CreateDeviceRow("Living Room Smoke Level", 220);
+            CreateDeviceRow("Bedroom Smoke Level", 280);
+        }
+
+        private void CreateStatCard(string title, string value, Color valColor, int xPos)
+        {
+            Panel card = new Panel { Size = new Size(190, 80), Left = xPos, Top = 10, BackColor = Color.FromArgb(25, 30, 50) };
+            Label lb_title = new Label { Text = title, Top = 15, Left = 15, ForeColor = Color.Gray, AutoSize = true, Font = new Font("Segoe UI", 8) };
+            Label lb_val = new Label { Text = value, Top = 35, Left = 15, ForeColor = valColor, Font = new Font("Segoe UI", 18, FontStyle.Bold), AutoSize = true };
+            card.Controls.AddRange(new Control[] { lb_title, lb_val });
+            pnl_cards_container.Controls.Add(card);
+        }
+
+        private void CreateDeviceRow(string roomName, int yPos)
+        {
+            Panel row = new Panel { Size = new Size(820, 50), Left = 5, Top = yPos, BackColor = Color.FromArgb(20, 25, 45) };
+            Label lb_name = new Label { Text = roomName, Top = 15, Left = 15, ForeColor = Color.White, AutoSize = true, Width = 200 };
+
+            // პროგრეს ბარი (ვიზუალური %-ისთვის)
+            Panel pnl_progress_bg = new Panel { Size = new Size(400, 10), Left = 220, Top = 20, BackColor = Color.FromArgb(40, 45, 65) };
+            Panel pnl_progress_fill = new Panel { Size = new Size(0, 10), Left = 0, Top = 0, BackColor = Color.FromArgb(0, 255, 149) };
+            pnl_progress_bg.Controls.Add(pnl_progress_fill);
+
+            Label lb_pct = new Label { Text = "0%", Top = 15, Left = 650, ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), AutoSize = true };
+            Label lb_status = new Label { Text = "SAFE", Top = 15, Left = 730, ForeColor = Color.Green, AutoSize = true };
+
+            row.Controls.AddRange(new Control[] { lb_name, pnl_progress_bg, lb_pct, lb_status });
+            pnl_cards_container.Controls.Add(row);
+
+            // ვინახავთ ელემენტებს სიაში, რომ მერე ტაიმერით განვაახლოთ
+            deviceRows.Add(new DeviceUI { RowPanel = row, FillPanel = pnl_progress_fill, PctLabel = lb_pct, StatusLabel = lb_status });
+        }
+
+        // სიმულაციის ლოგიკა - აქ ხდება "ბზუილი" და %-ების ცვლილება
+        private void SimulationTimer_Tick(object sender, EventArgs e)
+        {
+            foreach (var device in deviceRows)
+            {
+                int smokeLevel = rnd.Next(0, 100); // ვიგონებთ შემთხვევით %-ს 0-დან 100-მდე
+                device.PctLabel.Text = smokeLevel + "%";
+                device.FillPanel.Width = (int)(smokeLevel * 4); // ვაახლებთ პროგრეს ბარს
+
+                if (smokeLevel > 50) // DANGER %
+                {
+                    device.StatusLabel.Text = "DANGER!";
+                    device.StatusLabel.ForeColor = Color.Red;
+                    device.FillPanel.BackColor = Color.Red;
+
+                    // ვიზუალური ბზუილი (ციმციმი)
+                    device.RowPanel.BackColor = (device.RowPanel.BackColor == Color.DarkRed) ? Color.FromArgb(20, 25, 45) : Color.DarkRed;
+                }
+                else if (smokeLevel > 25) // WARNING %
+                {
+                    device.StatusLabel.Text = "WARNING";
+                    device.StatusLabel.ForeColor = Color.Orange;
+                    device.FillPanel.BackColor = Color.Orange;
+                    device.RowPanel.BackColor = Color.FromArgb(20, 25, 45); // ჩვეულებრივი ფონი
+                }
+                else // SAFE %
+                {
+                    device.StatusLabel.Text = "SAFE";
+                    device.StatusLabel.ForeColor = Color.FromArgb(0, 255, 149);
+                    device.FillPanel.BackColor = Color.FromArgb(0, 255, 149);
+                    device.RowPanel.BackColor = Color.FromArgb(20, 25, 45);
+                }
+            }
+        }
+
+        private void CenterControl(Control ctrl)
+        {
+            if (ctrl != null)
+            {
+                ctrl.Left = (this.ClientSize.Width - ctrl.Width) / 2;
+                ctrl.Top = (this.ClientSize.Height - ctrl.Height) / 2;
+            }
+        }
+
+        private void Form1_Resize(object sender, EventArgs e)
+        {
+            CenterControl(gb_login);
+            CenterControl(gb_reg);
+            CenterControl(gb_dashboard);
+        }
+
+        private void bt_signin_Click(object sender, EventArgs e)
+        {
+            var foundUser = usersList.Find(u => u.Email == tb_email.Text && u.Password == tb_pasw.Text);
+            if (foundUser != null)
+            {
+                attempts = 0;
+                lb_error.Text = "";
+                lb_user_email.Text = foundUser.Email;
+                lb_user_email.Left = gb_dashboard.Width - lb_user_email.Width - 110;
+
+                gb_login.Visible = false;
+                gb_dashboard.Visible = true;
+                CenterControl(gb_dashboard);
+
+                simulationTimer.Start(); // ვიწყებთ სიმულაციას სისტემაში შესვლისას
+            }
+            else
+            {
+                attempts++;
+                lb_error.ForeColor = Color.Red;
+                if (attempts >= 3) { StartLockout(); lb_error.Text = "სისტემა დაბლოკილია!"; }
+                else { lb_error.Text = text[7] + " (დაგრჩათ " + (3 - attempts) + " ცდა)"; }
+                lb_error.Left = (gb_login.Width - lb_error.Width) / 2;
+            }
+        }
+
+        private void StartLockout()
+        {
+            bt_signin.Enabled = false; tb_email.Enabled = false; tb_pasw.Enabled = false;
+            secondsRemaining = lockoutTime; lockoutTimer.Start(); lockoutTime = 180;
+        }
+
+        private void LockoutTimer_Tick(object sender, EventArgs e)
+        {
+            if (secondsRemaining > 0) { secondsRemaining--; lb_error.Text = $"სისტემა დაბლოკილია! ცადეთ {secondsRemaining / 60}:{secondsRemaining % 60:D2} წუთში"; }
+            else { lockoutTimer.Stop(); bt_signin.Enabled = true; tb_email.Enabled = true; tb_pasw.Enabled = true; lb_error.Text = "შეგიძლიათ ისევ სცადოთ"; lb_error.ForeColor = Color.Orange; attempts = 2; }
+            lb_error.Left = (gb_login.Width - lb_error.Width) / 2;
+        }
+
+        private void bt_signin_register_Click(object sender, EventArgs e) { gb_login.Visible = false; gb_reg.Visible = true; CenterControl(gb_reg); }
+
         private void bt_reg_Click(object sender, EventArgs e)
         {
-            bool exists = usersList.Exists(u => u.Email == tb_regmail.Text); // მეილის შემოწმება ბაზაში
-            string password = tb_regpasw.Text;
-            bool isPasswordValid = ValidatePassword(password); // პაროლის სირთულის შემოწმება
-
-            // ვალიდაცია: პაროლების დამთხვევა, ცარიელი ველი, არსებული მეილი და სირთულე
+            bool exists = usersList.Exists(u => u.Email == tb_regmail.Text);
+            bool isPasswordValid = ValidatePassword(tb_regpasw.Text);
             if (tb_regpasw.Text == tb_regpaswconf.Text && !string.IsNullOrEmpty(tb_regmail.Text) && !exists && isPasswordValid)
             {
                 usersList.Add(new UserData { Email = tb_regmail.Text, Password = tb_regpasw.Text });
-                SaveUsers(); // ახალი მომხმარებლის შენახვა
-
-                tb_regmail.Text = string.Empty;
-                tb_regpasw.Text = string.Empty;
-                tb_regpaswconf.Text = string.Empty;
-
-                gb_reg.Visible = false;
-                gb_login.Visible = true;
-
-                CenterControl(gb_login);
+                SaveUsers();
+                gb_reg.Visible = false; gb_login.Visible = true;
                 MessageBox.Show("რეგისტრაცია წარმატებულია!");
             }
             else
             {
-                // შეცდომის შეტყობინებების ჩვენება
-                if (!isPasswordValid)
-                    lb_regerror.Text = "პაროლი უნდა შეიცავდეს: 1 დიდ ასოს, 1 ციფრს და 1 სიმბოლოს!";
-                else if (exists)
-                    lb_regerror.Text = "ეს მეილი უკვე დაკავებულია!";
-                else
-                    lb_regerror.Text = text[14];
-
+                if (!isPasswordValid) lb_regerror.Text = "პაროლი უნდა შეიცავდეს: 1 დიდ ასოს, 1 ციფრს და 1 სიმბოლოს!";
+                else if (exists) lb_regerror.Text = "ეს მეილი უკვე დაკავებულია!";
+                else lb_regerror.Text = text[14];
                 lb_regerror.ForeColor = Color.Red;
-                lb_regerror.AutoSize = true;
                 lb_regerror.Left = (gb_reg.Width - lb_regerror.Width) / 2;
             }
         }
 
-        // პაროლის სირთულის ვალიდაციის ფუნქცია
-        private bool ValidatePassword(string password)
+        private bool ValidatePassword(string password) { return password.Any(char.IsUpper) && password.Any(char.IsDigit) && password.Any(ch => !char.IsLetterOrDigit(ch)); }
+        private void SaveUsers() { File.WriteAllText(filePath, JsonSerializer.Serialize(usersList)); }
+        private void LoadUsers()
         {
-            bool hasUpperCase = password.Any(char.IsUpper);
-            bool hasDigit = password.Any(char.IsDigit);
-            bool hasSpecial = password.Any(ch => !char.IsLetterOrDigit(ch));
-            return hasUpperCase && hasDigit && hasSpecial;
+            if (File.Exists(filePath)) usersList = JsonSerializer.Deserialize<List<UserData>>(File.ReadAllText(filePath)) ?? new List<UserData>();
+            else { usersList.Add(new UserData { Email = "admin@iot.com", Password = "Password1!" }); SaveUsers(); }
         }
     }
 
-    // მომხმარებლის მონაცემების მოდელი JSON-ისთვის
-    public class UserData
+    // დამხმარე კლასი ინტერფეისის ელემენტების სამართავად
+    public class DeviceUI
     {
-        public string Email { get; set; }
-        public string Password { get; set; }
+        public Panel RowPanel { get; set; }
+        public Panel FillPanel { get; set; }
+        public Label PctLabel { get; set; }
+        public Label StatusLabel { get; set; }
     }
+
+    public class UserData { public string Email { get; set; } public string Password { get; set; } }
 }
